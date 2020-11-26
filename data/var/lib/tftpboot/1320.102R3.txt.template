@@ -1,0 +1,2 @@
+{{ cfg_swfp_file | basename }}
+{{ st.stat.checksum }}

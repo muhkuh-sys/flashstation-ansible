@@ -1,0 +1,177 @@
+---
+- hosts: FreshlyInstalledBoards
+  remote_user: muhkuh
+  become: yes
+  become_user: root
+  vars:
+    ask_pass: True
+    ansible_ssh_pass: muhkuh65536
+  vars_prompt:
+  - name: cfg_hostname
+    prompt: 'Please enter the hostname of the new flash station'
+    private: no
+    when: cfg_hostname is undefined
+  - name: cfg_swfp_file
+    prompt: 'Please enter the path to the SWFP to install on the new flash station'
+    private: no
+    when: cfg_swfp_file is undefined
+
+  tasks:
+  - name: disable unneeded hardware
+    lineinfile:
+      path: /boot/firmware/usercfg.txt
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'dtoverlay=disable-wifi'
+      - 'dtoverlay=disable-bt'
+      - 'hdmi_blanking=2'
+
+  - name: blacklist unwanted modules
+    kernel_blacklist:
+      blacklist_file: /etc/modprobe.d/raspi-blacklist.conf
+      name: '{{ item }}'
+      state: present
+    with_items:
+      - 'brcmfmac'
+      - 'brcmutil'
+      - 'bluetooth'
+      - 'btsdio'
+
+  - name: uninstall unwanted packets
+    apt:
+      name: landscape-common, pastebinit, plymouth, snapd, unattended-upgrades
+      state: absent
+      purge: yes
+
+  - name: Disable the apt-daily timer
+    systemd:
+      name: apt-daily.timer
+      enabled: no
+      state: stopped
+
+  - name: Disable the IP announcer
+    systemd:
+      name: announce_ip.service
+      enabled: no
+      state: stopped
+
+  - name: limit the journal
+    ini_file:
+      path: /etc/systemd/journald.conf
+      section: Journal
+      option: SystemMaxUse
+      value: 128M
+      create: no
+
+  - name: Install the raspberry-ready-led
+    unarchive:
+      src: https://github.com/muhkuh-sys/org.muhkuh.tools-raspberry-ready-led/releases/download/v0.0.1/raspberry-ready-led-0.0.1-ubuntu-20.04_arm64.tar.gz
+      dest: /opt/
+      remote_src: yes
+  - name: Install the raspberry-ready-led service file
+    copy:
+      src: /opt/raspberry-ready-led-0.0.1/systemd/ready_led.service
+      dest: /lib/systemd/system/
+      remote_src: yes
+  - name: Enable the raspberry-ready-led service
+    systemd:
+      name: ready_led.service
+      enabled: yes
+      masked: no
+
+  - name: install the eth-kickstart
+    unarchive:
+      src: https://github.com/muhkuh-sys/org.muhkuh.tools-eth_kick_start/releases/download/v0.0.1/eth_kick_start_netx4000-0.0.1-ubuntu-20.04_arm64.tar.gz
+      dest: /opt/
+      remote_src: yes
+  - name: install the eth-kickstart service file
+    copy:
+      src: data/lib/systemd/system/eth_kickstart.service
+      dest: /lib/systemd/system/
+  - name: Enable the eth-kickstart service
+    systemd:
+      name: eth_kickstart.service
+      enabled: yes
+      masked: no
+
+  - name: install the TFTP server
+    apt:
+      name: tftpd-hpa
+      state: present
+  - name: Set the TFTP directory
+    ini_file:
+      path: /etc/default/tftpd-hpa
+      section: null
+      option: TFTP_DIRECTORY
+      value: '"/var/lib/tftpboot"'
+      create: no
+      no_extra_spaces: yes
+  - name: Create the TFTP directory
+    file:
+      path: /var/lib/tftpboot
+      state: directory
+
+  - name: install the DHCP server
+    apt:
+      name: isc-dhcp-server
+      state: present
+  - name: install the DHCP configuration
+    copy:
+      src: data/etc/dhcp/dhcpd.conf
+      dest: /etc/dhcp/
+      force: yes
+
+  - name: install the network configuration
+    copy:
+      src: data/etc/netplan/50-cloud-init.yaml
+      dest: /etc/netplan/
+      force: yes
+  - name: prevent cloud network configuration
+    copy:
+      src: data/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+      dest: /etc/cloud/cloud.cfg.d/
+      force: yes
+
+  - name: install the flasher APP
+    copy:
+      src: data/var/lib/tftpboot/flashapp_netx4000.img
+      dest: /var/lib/tftpboot/
+      force: yes
+
+  - name: install the image
+    copy:
+      src: '{{ cfg_swfp_file }}'
+      dest: /var/lib/tftpboot/
+      force: yes
+  - name: get the stats of the file
+    stat:
+      path: '/var/lib/tftpboot/{{ cfg_swfp_file | basename }}'
+      checksum_algorithm: sha384
+      follow: yes
+      get_attributes: no
+      get_checksum: yes
+      get_mime: no
+    register: st
+  - name: install the control file
+    template:
+      src: data/var/lib/tftpboot/1320.102R3.txt.template
+      dest: /var/lib/tftpboot/1320.102R3.txt
+      force: yes
+
+  - name: set the new hostname
+    hostname:
+      name: "{{ cfg_hostname }}"
+
+  - name: Set the filesystem to read-only
+    lineinfile:
+      path: /etc/overlayroot.local.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'overlayroot_cfgdisk=LABEL=OROOTCFG'
+      - 'overlayroot="tmpfs:recurse=0"'
+
+  - name: Poweroff
+    shell:
+      cmd: poweroff
