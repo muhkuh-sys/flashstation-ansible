@@ -67,9 +67,9 @@
 
   - name: Install the raspberry-ready-led
     unarchive:
-      src: https://github.com/muhkuh-sys/org.muhkuh.tools-raspberry-ready-led/releases/download/v0.0.1/raspberry-ready-led-0.0.1-ubuntu-20.04_arm64.tar.gz
+      # Source: https://github.com/muhkuh-sys/org.muhkuh.tools-raspberry-ready-led/releases/download/v0.0.1/raspberry-ready-led-0.0.1-ubuntu-20.04_arm64.tar.gz
+      src: data/raspberry-ready-led-0.0.1-ubuntu-20.04_arm64.tar.gz
       dest: /opt/
-      remote_src: yes
   - name: Install the raspberry-ready-led service file
     copy:
       src: /opt/raspberry-ready-led-0.0.1/systemd/ready_led.service
@@ -83,9 +83,9 @@
 
   - name: install the eth-kickstart
     unarchive:
-      src: https://github.com/muhkuh-sys/org.muhkuh.tools-eth_kick_start/releases/download/v0.0.1/eth_kick_start_netx4000-0.0.1-ubuntu-20.04_arm64.tar.gz
+      # Source: https://github.com/muhkuh-sys/org.muhkuh.tools-eth_kick_start/releases/download/v0.0.1/eth_kick_start_netx4000-0.0.1-ubuntu-20.04_arm64.tar.gz
+      src: data/eth_kick_start_netx4000-0.0.1-ubuntu-20.04_arm64.tar.gz
       dest: /opt/
-      remote_src: yes
   - name: install the eth-kickstart service file
     copy:
       src: data/lib/systemd/system/eth_kickstart.service
