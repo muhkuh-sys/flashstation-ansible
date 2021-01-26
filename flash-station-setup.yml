@@ -11,10 +11,6 @@
     prompt: 'Please enter the hostname of the new flash station'
     private: no
     when: cfg_hostname is undefined
-  - name: cfg_swfp_file
-    prompt: 'Please enter the path to the SWFP to install on the new flash station'
-    private: no
-    when: cfg_swfp_file is undefined
 
   tasks:
   - name: disable unneeded hardware
@@ -132,32 +128,6 @@
     copy:
       src: data/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
       dest: /etc/cloud/cloud.cfg.d/
-      force: yes
-
-  - name: install the flasher APP
-    copy:
-      src: data/var/lib/tftpboot/flashapp_netx4000.img
-      dest: /var/lib/tftpboot/
-      force: yes
-
-  - name: install the image
-    copy:
-      src: '{{ cfg_swfp_file }}'
-      dest: /var/lib/tftpboot/
-      force: yes
-  - name: get the stats of the file
-    stat:
-      path: '/var/lib/tftpboot/{{ cfg_swfp_file | basename }}'
-      checksum_algorithm: sha384
-      follow: yes
-      get_attributes: no
-      get_checksum: yes
-      get_mime: no
-    register: st
-  - name: install the control file
-    template:
-      src: data/var/lib/tftpboot/1320.102R3.txt.template
-      dest: /var/lib/tftpboot/1320.102R3.txt
       force: yes
 
   - name: set the new hostname
