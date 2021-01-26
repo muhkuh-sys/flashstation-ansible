@@ -150,5 +150,4 @@
       - 'overlayroot="tmpfs:recurse=0"'
 
   - name: Poweroff
-    shell:
-      cmd: poweroff
+    community.general.shutdown:
