@@ -101,7 +101,7 @@
       path: /etc/default/tftpd-hpa
       section: null
       option: TFTP_DIRECTORY
-      value: '"/var/lib/tftpboot"'
+      value: '"/media/data"'
       create: no
       no_extra_spaces: yes
   - name: Create the TFTP directory
@@ -129,6 +129,12 @@
       src: data/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
       dest: /etc/cloud/cloud.cfg.d/
       force: yes
+
+  - name: mount the memorystick at /media/data
+    lineinfile:
+      path: /etc/fstab
+      state: present
+      line: '/dev/sda1 /media/data vfat auto,nodev,noexec,nosuid,ro 0 0'
 
   - name: set the new hostname
     hostname:
