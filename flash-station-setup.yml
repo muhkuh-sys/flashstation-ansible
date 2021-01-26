@@ -106,7 +106,7 @@
       no_extra_spaces: yes
   - name: Create the TFTP directory
     file:
-      path: /var/lib/tftpboot
+      path: /media/data
       state: directory
 
   - name: install the DHCP server
