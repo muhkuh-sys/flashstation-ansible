@@ -26,6 +26,8 @@
       - 'dtoverlay=disable-wifi'
       - 'dtoverlay=disable-bt'
       - 'hdmi_blanking=2'
+      - 'disable_splash=1'
+      - 'boot_delay=0'
 
   - name: blacklist unwanted modules
     kernel_blacklist:
@@ -40,21 +42,20 @@
 
   - name: uninstall unwanted packets
     apt:
-      name: landscape-common, pastebinit, plymouth, snapd, unattended-upgrades
+      name: landscape-common, pastebinit, plymouth, snapd, unattended-upgrades, cloud-init
       state: absent
       purge: yes
 
-  - name: Disable the apt-daily timer
+  - name: Disable unwanted services.
     systemd:
-      name: apt-daily.timer
+      name: '{{ item }}'
       enabled: no
       state: stopped
-
-  - name: Disable the IP announcer
-    systemd:
-      name: announce_ip.service
-      enabled: no
-      state: stopped
+    with_items:
+      - 'apt-daily.timer'
+      - 'announce_ip.service'
+      - 'wpa_supplicant.service'
+      - 'accounts-daemon.service'
 
   - name: limit the journal
     ini_file:
