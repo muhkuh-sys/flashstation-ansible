@@ -60,6 +60,11 @@
       value: 128M
       create: no
 
+  - name: Install avahi
+    apt:
+      name: avahi-daemon
+      state: present
+
   - name: Install the raspberry-ready-led
     unarchive:
       # Source: https://github.com/muhkuh-sys/org.muhkuh.tools-raspberry-ready-led/releases/download/v0.0.1/raspberry-ready-led-0.0.1-ubuntu-20.04_arm64.tar.gz
