@@ -49,7 +49,6 @@
       state: stopped
     with_items:
       - 'apt-daily.timer'
-      - 'announce_ip.service'
       - 'wpa_supplicant.service'
       - 'accounts-daemon.service'
 
