@@ -4,7 +4,6 @@ After=network.target
 
 [Service]
 Type=simple
-Environment="LD_LIBRARY_PATH=/opt/eth_kick_start_netx4000-0.0.1"
 WorkingDirectory=/opt/eth_kick_start_netx4000-0.0.1
 ExecStart=/opt/eth_kick_start_netx4000-0.0.1/lua5.4 eth_detect.lua
 Restart=on-failure
