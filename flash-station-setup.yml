@@ -88,8 +88,8 @@
       dest: /opt/
   - name: install the eth-kickstart service file
     copy:
-      src: data/lib/systemd/system/eth_kickstart.service
-      dest: /lib/systemd/system/
+      src: data/etc/systemd/system/eth_kickstart.service
+      dest: /etc/systemd/system/
   - name: Enable the eth-kickstart service
     systemd:
       name: eth_kickstart.service
