@@ -1,0 +1,16 @@
+[Unit]
+Description=Flashstation notification forwarder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/flasherapp-notifications
+ExecStart=/opt/flasherapp-notifications/bin/python3 /opt/flasherapp-notifications/notifications.py
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

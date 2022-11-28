@@ -6,13 +6,12 @@
   vars:
     ask_pass: True
     ansible_ssh_pass: muhkuh65536
-  vars_prompt:
-  - name: cfg_hostname
-    prompt: 'Please enter the hostname of the new flash station'
-    private: no
-    when: cfg_hostname is undefined
 
   tasks:
+  - name: Update the package list
+    ansible.builtin.apt:
+      update_cache: yes
+
   - name: disable unneeded hardware
     lineinfile:
       path: /boot/firmware/usercfg.txt
@@ -37,13 +36,13 @@
       - 'btsdio'
 
   - name: uninstall unwanted packets
-    apt:
-      name: landscape-common, pastebinit, plymouth, snapd, unattended-upgrades, cloud-init
+    ansible.builtin.apt:
+      name: ['cloud-init', 'landscape-common', 'pastebinit', 'plymouth', 'snapd', 'unattended-upgrades']
       state: absent
       purge: yes
 
   - name: Disable unwanted services.
-    systemd:
+    ansible.builtin.systemd:
       name: '{{ item }}'
       enabled: no
       state: stopped
@@ -53,17 +52,25 @@
       - 'accounts-daemon.service'
 
   - name: limit the journal
-    ini_file:
+    ansible.builtin.ini_file:
       path: /etc/systemd/journald.conf
       section: Journal
       option: SystemMaxUse
       value: 128M
       create: no
 
-  - name: Install avahi
-    apt:
-      name: avahi-daemon
+  - name: Set the hostname.
+    ansible.builtin.hostname:
+      name: "flashstation-{{ lookup('file', '/etc/machine-id') }}"
+
+  - name: Install packages.
+    ansible.builtin.apt:
+      name: ['avahi-daemon', 'sntp']
       state: present
+
+  - name: Set the timezone.
+    ansible.builtin.timezone:
+      name: Europe/Berlin
 
   - name: Install the raspberry-ready-led
     unarchive:
@@ -96,22 +103,15 @@
       enabled: yes
       masked: no
 
-  - name: install the TFTP server
+  - name: Install the TFTP server.
     apt:
       name: tftpd-hpa
       state: present
-  - name: Set the TFTP directory
-    ini_file:
-      path: /etc/default/tftpd-hpa
-      section: null
-      option: TFTP_DIRECTORY
-      value: '"/media/data"'
-      create: no
-      no_extra_spaces: yes
-  - name: Create the TFTP directory
-    file:
-      path: /media/data
-      state: directory
+
+  - name: Install the flashstation APP.
+    copy:
+      src: data/var/lib/tftpboot/flashapp_netx4000.img
+      dest: /srv/tftp/
 
   - name: install the DHCP server
     apt:
@@ -134,15 +134,63 @@
       dest: /etc/cloud/cloud.cfg.d/
       force: yes
 
-  - name: mount the memorystick at /media/data
-    lineinfile:
-      path: /etc/fstab
+  - name: Create the mount point for the memorystick
+    file:
+      path: /media/data
+      state: directory
+  - name: Mount the memorystick at /media/data
+    ansible.posix.mount:
+      path: /media/data
+      src: /dev/sda1
+      fstype: vfat
+      opts: auto,nofail,nodev,noexec,nosuid,ro
+      dump: '0'
+      passno: '0'
       state: present
-      line: '/dev/sda1 /media/data vfat auto,nodev,noexec,nosuid,ro 0 0'
+  - name: Make sure the memory stick is not mounted now.
+    ansible.posix.mount:
+      path: /media/data
+      state: unmounted
+  - name: Install a default web page.
+    copy:
+      src: data/media/data/index.html
+      dest: /media/data/index.html
 
-  - name: set the new hostname
-    hostname:
-      name: "{{ cfg_hostname }}"
+  - name: Install the web server.
+    apt:
+      name: nginx-core
+      state: present
+  - name: Configure the web server.
+    copy:
+      src: data/etc/nginx/sites-available/default
+      dest: /etc/nginx/sites-available/
+      force: yes
+
+  # NOTE: The goal is to create an empty virtualenv, but the ansible pip
+  #       module insists on installing something. dummy_test to the rescue!
+  #       See here for details: https://pypi.org/project/dummy_test/
+  - name: Install python3 venv.
+    apt:
+      name: python3-venv
+      state: present
+  - name: Create a virtualenv for the flasherapp-notifications service.
+    ansible.builtin.pip:
+      name: dummy_test
+      virtualenv: /opt/flasherapp-notifications/
+      virtualenv_command: /usr/bin/python3 -m venv
+  - name: Install the sample flasherapp-notifications script.
+    copy:
+      src: data/opt/flasherapp-notifications/notifications.py
+      dest: /opt/flasherapp-notifications/
+  - name: Install the flasherapp-notifications service file.
+    copy:
+      src: data/etc/systemd/system/flasherapp-notifications.service
+      dest: /etc/systemd/system/
+  - name: Enable the flasherapp-notifications service.
+    systemd:
+      name: flasherapp-notifications.service
+      enabled: yes
+      masked: no
 
   - name: Set the filesystem to read-only
     lineinfile:

@@ -1,0 +1,34 @@
+#cloud-config
+
+# Set the hostname.
+hostname: muhkuh-teststation-set-me-up
+
+# Enable password authentication with the SSH daemon
+ssh_pwauth: true
+
+## Add the empty group "muhkuh" to the system. The user will be created later.
+groups:
+- muhkuh
+
+## Create a new user with the name "muhkuh". It has access rights like the
+#  default "ubuntu" user. The password is set to "muhkuh65536".
+users:
+- name: muhkuh
+  gecos: Muhkuh
+  primary_group: muhkuh
+  groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video]
+  lock_passwd: false
+  passwd: $1$DYDIC3M5$HJ2lA8xrKXcS3Xw6WfqwC/
+  sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+  shell: /bin/bash
+
+## Update apt database and upgrade packages on first boot
+package_update: true
+
+## Install additional packages on first boot
+packages:
+- avahi-daemon
+
+runcmd:
+- [ "/usr/bin/apt", "purge", "-y", "unattended-upgrades" ]
+- [ "/usr/bin/apt", "purge", "-y", "snapd" ]
