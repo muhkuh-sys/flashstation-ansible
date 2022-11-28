@@ -1,6 +1,6 @@
 # How to use this
 
-First copy the 64bit Ubuntu Raspberry image from [here](https://ubuntu.com/download/raspberry-pi) to a memory card.
+First copy the 64bit Ubuntu 20.04 Raspberry image from [here](https://ubuntu.com/download/raspberry-pi) to a memory card.
 There are simple GUI tools for this task:
 
 * [Ubuntu tutorial](https://ubuntu.com/tutorials/how-to-install-ubuntu-on-your-raspberry-pi#2-prepare-the-sd-card)
@@ -32,67 +32,74 @@ huhn@asteroid:~# umount /dev/sdf2
 huhn@asteroid:~# xzcat ubuntu-20.04-preinstalled-server-arm64+raspi.img.xz | sudo dd bs=4M of=/dev/sdf
 ```
 
-When the card ist written, replace the file ```user-data``` in the first partition with the following lines.
-This creates a muhkuh user with a ready-to-use password, installs avahi and reads the IP of the board with espeak-ng.
+When the card ist written, replace the file ```user-data``` in the first partition with the file in the
+```cloud_init``` subfolder of this repository. This creates a muhkuh user with a ready-to-use password,
+and installs avahi.
 
+Then insert the card into the Raspberry, connect it to the network and plug in the power. It is important that the raspberry can connect to the internet.
+After a few seconds the green activity led starts going on and off.
+The first boot will take a while. Either connect a UART and login with user "muhkuh" and password "muhkuh65536" to find out the IP address.
+An alternative is to use avahi to find the board. The initial hostname of the board is "muhkuh-teststation-set-me-up.local".
+
+Example with UART:
+```bash
+huhn@asteroid:~$ tio /dev/ttyUSB0 
+[tio 09:20:53] tio v1.32
+[tio 09:20:53] Press ctrl-t q to quit
+[tio 09:20:53] Connected
+
+muhkuh-teststation-set-me-up login: muhkuh
+Password: 
+Welcome to Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0-1042-raspi aarch64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Wed Sep 21 07:21:04 UTC 2022
+
+  System load:  0.08               Swap usage:  0%       Users logged in: 0
+  Usage of /:   11.8% of 14.30GB   Temperature: 37.5 C
+  Memory usage: 13%                Processes:   126
+
+199 updates can be applied immediately.
+129 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+
+
+The programs included with the Ubuntu system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+To run a command as administrator (user "root"), use "sudo <command>".
+See "man sudo_root" for details.
+
+muhkuh@muhkuh-teststation-set-me-up:~$ ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether e4:5f:01:b0:97:ef brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.73/24 brd 192.168.1.255 scope global dynamic eth0
+       valid_lft 86396sec preferred_lft 86396sec
+    inet6 2a00:6020:15dc:d200:e65f:1ff:feb0:97ef/64 scope global dynamic mngtmpaddr noprefixroute 
+       valid_lft 3597sec preferred_lft 2247sec
+    inet6 fdaa:bbcc:ddee:0:e65f:1ff:feb0:97ef/64 scope global dynamic mngtmpaddr noprefixroute 
+       valid_lft 7197sec preferred_lft 3597sec
+    inet6 fe80::e65f:1ff:feb0:97ef/64 scope link 
+       valid_lft forever preferred_lft forever
+3: wlan0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    link/ether e4:5f:01:b0:97:f0 brd ff:ff:ff:ff:ff:ff
 ```
-#cloud-config
 
-# Set the hostname.
-hostname: muhkuh-teststation-set-me-up
-
-# Enable password authentication with the SSH daemon
-ssh_pwauth: true
-
-## Add the empty group "muhkuh" to the system. The user will be created later.
-groups:
-- muhkuh
-
-## Create a new user with the name "muhkuh". It has access rights like the
-#  default "ubuntu" user. The password is set to "muhkuh65536".
-users:
-- name: muhkuh
-  gecos: Muhkuh
-  primary_group: muhkuh
-  groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video]
-  lock_passwd: false
-  passwd: $1$DYDIC3M5$HJ2lA8xrKXcS3Xw6WfqwC/
-  sudo: ["ALL=(ALL) NOPASSWD:ALL"]
-  shell: /bin/bash
-
-## Update apt database and upgrade packages on first boot
-package_update: true
-
-## Install additional packages on first boot
-packages:
-- avahi-daemon
-- espeak-ng
-
-write_files:
-- encoding: b64
-  content: IyEgL2Jpbi9iYXNoCndoaWxlIFsgdHJ1ZSBdOyBkbyBpcCAtNCAtbyBhZGRyZXNzIHNob3cgZGV2IGV0aDAgfCBncmVwIC1vUCAnKD88PWluZXRccylcZCsoXC5cZCspezN9JyB8IHNlZCAtZSAncy9cLi8gcG9pbnQgL2cnIHwgZXNwZWFrLW5nIC1zIDEyNTsgc2xlZXAgMjsgZG9uZTsK
-  owner: root:root
-  path: /opt/announce_ip
-  permissions: '0755'
-- encoding: b64
-  content: W1VuaXRdCkRlc2NyaXB0aW9uPUFubm91bmNlIHRoZSBJUCB3aXRoIGVzcGVhay1uZwpBZnRlcj1uZXR3b3JrLnRhcmdldAoKW1NlcnZpY2VdClR5cGU9c2ltcGxlCkV4ZWNTdGFydD0vb3B0L2Fubm91bmNlX2lwCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK
-  owner: root:root
-  path: /lib/systemd/system/announce_ip.service
-  permissions: '0644'
-
-## Remove unattended upgrades. It blocks the package list at random times so
-#  access with management tools like ansible fails.
-runcmd:
-- [ "/bin/systemctl", "enable", "announce_ip.service" ]
-- [ "/bin/systemctl", "start", "announce_ip.service" ]
-- [ "/usr/bin/apt", "purge", "unattended-upgrades" ]
-```
-
-
-Then insert the card into the Raspberry, connect it to the network and plug in the power. After a few seconds the green activity led starts going on and off.
-The first boot will take a while. Either connect a speaker and wait until the IP is read aloud be epeak-ng.
-An alternative is to use avahi to find the board. The initial hostname of the board is "muhkuh-teststation-set-me-up.local":
-
+Example with avahi:
 ```bash
 huhn@asteroid:~# avahi-resolve-host-name -4 muhkuh-teststation-set-me-up.local
 muhkuh-teststation-set-me-up.local      10.11.5.59
@@ -101,11 +108,9 @@ muhkuh-teststation-set-me-up.local      10.11.5.59
 Write the IP to the hosts file:
 
 ```ini
-[FreshlyInstalledBoards]                                                                                                                                                                                   10.11.5.59                                                                                                                                                                                                 
+[FreshlyInstalledBoards]
 10.11.5.59
 ```
-
-Build the flashstation APP from here https://github.com/muhkuh-sys/org.muhkuh.tools-flashstation_app and copy it to ```data/var/lib/tftpboot/flashapp_netx4000.img```.
 
 Then run the playbook:
 
@@ -113,10 +118,8 @@ Then run the playbook:
 huhn@asteroid:~# ansible-playbook flash-station-setup.yml
 ```
 
-The script asks for the hostname of the new flash station and the SWFP file to install.
-At the end it powers down the board.
+The script sets up the flash station. At the end it powers down the board.
 
-# TODO
+Please note that the device is now configured to the IP 192.168.64.1 . Connect it to a 
 
-* Automate download and install of the flashstation APP.
-* Powerdown cuts the connection to ansible immediately which results in an error.
+Here is a guide how to setup Ansible on Windows: https://phoenixnap.com/kb/install-ansible-on-windows
